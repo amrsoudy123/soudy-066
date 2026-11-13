@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة إدارة الدورات التدريبية المتقدمة</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+        .glass-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .pulse-sync { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- ========================================== -->
+    <!-- 1. الشريط العلوي العام (Global Header) -->
+    <!-- ========================================== -->
+    <header class="sticky top-0 z-40 glass-header border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- الشعار وعنوان المنصة -->
+            <div class="flex items-center space-x-3 space-x-reverse cursor-pointer" onclick="switchView('student')">
+                <div class="w-12 h-12 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-sky-200">
+                    <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-sky-800">منصة أكاديميا التعليمية</h1>
+                    <p class="text-xs text-slate-500">منظومة إدارية متكاملة لربط الطلاب بالمعلمين</p>
+                </div>
+            </div>
+
+            <!-- أزرار التبديل والمزامنة -->
+            <div class="flex items-center space-x-2 sm:space-x-4 space-x-reverse">
+                
+                <!-- شارة حالة المزامنة السحابية -->
+                <button onclick="openCloudConfigModal()" title="إعدادات المزامنة السحابية" id="cloud-status-badge" class="flex items-center space-x-2 space-x-reverse px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 pulse-sync"></span>
+                    <span id="cloud-status-text" class="hidden sm:inline">تخزين محلي (انقر للربط بـ Google Sheets)</span>
+                    <i class="fa-solid fa-file-excel text-sm"></i>
+                </button>
+
+                <!-- زر تضمين Google Sites -->
+                <button onclick="openEmbedModal()" class="hidden md:flex items-center space-x-1.5 space-x-reverse px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition border border-slate-300">
+                    <i class="fa-solid fa-code text-slate-500"></i>
+                    <span>تضمين الموقع</span>
+                </button>
+
+                <!-- أزرار التبديل الرئيسية -->
+                <div class="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center text-xs sm:text-sm font-semibold">
+                    <button id="btn-view-student" onclick="switchView('student')" class="px-3 py-1.5 rounded-lg transition bg-white text-sky-700 shadow-sm">
+                        <i class="fa-solid fa-user-graduate ml-1"></i> بوابة الطالب
+                    </button>
+                    <button id="btn-view-dashboard" onclick="switchView('dashboard')" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-user-shield ml-1"></i> لوحة التحكم
+                    </button>
+                </div>
+
+                <!-- زر تسجيل الخروج / المستخدم النشط -->
+                <div id="user-auth-badge" class="hidden">
+                    <button onclick="logoutUser()" title="تسجيل الخروج" class="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition border border-rose-200">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Area Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+
+        <!-- ========================================== -->
+        <!-- 2. واجهة الطالب (Student View) -->
+        <!-- ========================================== -->
+        <div id="student-view-container" class="space-y-8">
+            
+            <!-- الهيدر والترحيب -->
+            <div class="bg-gradient-to-r from-sky-700 via-indigo-700 to-slate-800 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+                <div class="absolute -left-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl"></div>
+                <div class="relative z-10 max-w-2xl">
+                    <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-semibold backdrop-blur-md mb-3">دورات تدريبية متخصصة ومباشرة</span>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold mb-3 leading-tight">سجل حضورك واستلم رابط المحاضرة المباشرة فوراً</h2>
+                    <p class="text-slate-200 text-sm sm:text-base leading-relaxed mb-6">اختر الكورس المناسب لك، وقم برفع صورة إيصال السداد لمتابعة حالة الحجز واستلام رابط الزوم أو المحاضرة المباشرة من معلمك.</p>
+                    
+                    <!-- أزرار تنقل الطالب الداخلية -->
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="scrollToSection('courses-list-section')" class="px-5 py-2.5 bg-white text-sky-800 font-bold rounded-xl shadow-lg hover:bg-slate-100 transition text-sm">
+                            <i class="fa-solid fa-book-open ml-1.5"></i> تصفح الكورسات المتاحة
+                        </button>
+                        <button onclick="openCheckStatusModal()" class="px-5 py-2.5 bg-white/10 backdrop-blur-md border border-white/30 text-white font-bold rounded-xl hover:bg-white/20 transition text-sm">
+                            <i class="fa-solid fa-search ml-1.5"></i> متابعة حجز واستلام الرابط
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم تصفح الكورسات -->
+            <div id="courses-list-section" class="space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800">الكورسات التدريبية المتاحة للتسجيل</h3>
+                        <p class="text-xs text-slate-500">اختر الدورة التدريبية واضغط على حجز المقعد</p>
+                    </div>
+                    <!-- شريط البحث الفوري -->
+                    <div class="relative w-full sm:w-72">
+                        <input type="text" id="student-search-input" onkeyup="filterStudentCourses()" placeholder="بحث باسم الكورس أو المعلم..." class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-white">
+                        <i class="fa-solid fa-search absolute right-3 top-3 text-slate-400 text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- شبكة الكورسات المتاحة -->
+                <div id="student-courses-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- سيتم توليد البطاقات ديناميكياً بواسطة JavaScript -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 3. شاشة تسجيل دخول المعلم / المدير (Login) -->
+        <!-- ========================================== -->
+        <div id="login-view-container" class="hidden max-w-md mx-auto my-12">
+            <div class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 space-y-6">
+                <div class="text-center space-y-2">
+                    <div class="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-800">تسجيل دخول اللوحة</h3>
+                    <p class="text-xs text-slate-500">قم بإدخال بيانات المعلم أو مدير النظام للوصول للوحة التحكم</p>
+                </div>
+
+                <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم أو البريد الإلكتروني</label>
+                        <div class="relative">
+                            <input type="text" id="login-username" required placeholder="admin أو teacher@edu.com" class="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            <i class="fa-solid fa-user absolute right-3 top-3.5 text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور</label>
+                        <div class="relative">
+                            <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                            <i class="fa-solid fa-key absolute right-3 top-3.5 text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <div id="login-error-msg" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium"></div>
+
+                    <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition text-sm">
+                        دخول للوحة التحكم <i class="fa-solid fa-arrow-left mr-1"></i>
+                    </button>
+                </form>
+
+                <!-- بيانات تجريبية سريعة -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2">
+                    <p class="font-bold text-slate-700">حسابات تجريبية للاختبار السريع:</p>
+                    <div class="flex justify-between items-center text-slate-600 border-b border-slate-200 pb-1">
+                        <span>معلم: <code class="bg-white px-1.5 py-0.5 rounded border">teacher@edu.com</code></span>
+                        <span>كلمة السر: <code class="bg-white px-1.5 py-0.5 rounded border">123456</code></span>
+                        <button type="button" onclick="quickFillLogin('teacher@edu.com','123456')" class="text-sky-600 font-bold hover:underline">تعبئة</button>
+                    </div>
+                    <div class="flex justify-between items-center text-slate-600">
+                        <span>المدير: <code class="bg-white px-1.5 py-0.5 rounded border">admin@system.com</code></span>
+                        <span>كلمة السر: <code class="bg-white px-1.5 py-0.5 rounded border">admin123</code></span>
+                        <button type="button" onclick="quickFillLogin('admin@system.com','admin123')" class="text-sky-600 font-bold hover:underline">تعبئة</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 4. لوحة التحكم (Teacher & Admin Dashboard) -->
+        <!-- ========================================== -->
+        <div id="dashboard-view-container" class="hidden space-y-8">
+            
+            <!-- هيدر لوحة التحكم وحالة المستخدم -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <span id="dash-user-role-badge" class="px-2.5 py-1 bg-sky-100 text-sky-800 text-xs font-bold rounded-lg">معلم</span>
+                        <h2 id="dash-welcome-title" class="text-xl font-bold text-slate-800">مرحباً بك في لوحة التحكم</h2>
+                    </div>
+                    <p id="dash-welcome-subtitle" class="text-xs text-slate-500 mt-1">يمكنك إدارة الدورات وإصدار روابط المحاضرات للطلاب المعتمَدين</p>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <!-- أزرار الإجراءات الخاصة بالمدير والمعلم -->
+                    <button id="btn-admin-manage-teachers" onclick="openTeachersManagementModal()" class="hidden px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                        <i class="fa-solid fa-users-gear ml-1"></i> إدارة المعلمين
+                    </button>
+                    <button onclick="openAddCourseModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                        <i class="fa-solid fa-plus ml-1"></i> إضافة كورس جديد
+                    </button>
+                </div>
+            </div>
+
+            <!-- بطاقات الإحصائيات -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="text-slate-400 text-xs font-bold mb-1">إجمالي الحجوزات</div>
+                    <div id="stat-total-students" class="text-2xl sm:text-3xl font-extrabold text-slate-800">0</div>
+                    <div class="text-xs text-sky-600 mt-1"><i class="fa-solid fa-users ml-1"></i> طالب مسجل</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="text-slate-400 text-xs font-bold mb-1">إيصالات بانتظار الاعتماد</div>
+                    <div id="stat-pending-payments" class="text-2xl sm:text-3xl font-extrabold text-amber-600">0</div>
+                    <div class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-clock ml-1"></i> يتطلب مراجعة المعلم</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="text-slate-400 text-xs font-bold mb-1">حجوزات مؤكدة ومسددة</div>
+                    <div id="stat-approved-payments" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">0</div>
+                    <div class="text-xs text-emerald-600 mt-1"><i class="fa-solid fa-check-circle ml-1"></i> تم تأكيد السداد</div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="text-slate-400 text-xs font-bold mb-1">تم إرسال رابط المحاضرة</div>
+                    <div id="stat-sent-links" class="text-2xl sm:text-3xl font-extrabold text-indigo-600">0</div>
+                    <div class="text-xs text-indigo-600 mt-1"><i class="fa-solid fa-paper-plane ml-1"></i> تم تسليم الرابط</div>
+                </div>
+            </div>
+
+            <!-- جدول إدارة الدورات الخاصة بالمعلم -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <h3 class="text-lg font-bold text-slate-800">الدورات التدريبية وإعداداتها</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
+                                <th class="p-3">اسم الدورة</th>
+                                <th class="p-3">المعلم المسؤول</th>
+                                <th class="p-3">التاريخ والوقت</th>
+                                <th class="p-3">سعر الدورة</th>
+                                <th class="p-3">رابط المحاضرة المباشر</th>
+                                <th class="p-3 text-center">التحكم</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-courses-table-body" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- جدول الدورات يولد برمجيًا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- جدول الطلاب وحجوزاتهم وإيصالاتهم -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">قائمة الطلاب وحالة إيصالات السداد</h3>
+                        <p class="text-xs text-slate-500">قم بمعاينة إيصال كل طالب واعتمد السداد لتصل له رابط المحاضرة</p>
+                    </div>
+                    <!-- فلترة الطلاب -->
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <select id="dash-filter-course" onchange="renderDashboardTables()" class="border border-slate-300 rounded-xl text-xs px-3 py-2 bg-slate-50 focus:outline-none">
+                            <option value="ALL">جميع الدورات</option>
+                        </select>
+                        <select id="dash-filter-status" onchange="renderDashboardTables()" class="border border-slate-300 rounded-xl text-xs px-3 py-2 bg-slate-50 focus:outline-none">
+                            <option value="ALL">جميع الحالات</option>
+                            <option value="قيد المراجعة">قيد المراجعة</option>
+                            <option value="مؤكد السداد">مؤكد السداد</option>
+                            <option value="مرفوض">مرفوض</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
+                                <th class="p-3">كود الحجز والطالب</th>
+                                <th class="p-3">رقم الهاتف</th>
+                                <th class="p-3">الكورس المسجل</th>
+                                <th class="p-3">إيصال السداد</th>
+                                <th class="p-3">حالة الحجز</th>
+                                <th class="p-3 text-center">الإجراء المتاح</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-students-table-body" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- جدول الطلاب يولد برمجيًا -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 5. النوافذ المنبثقة (Modals) -->
+    <!-- ========================================== -->
+
+    <!-- Modal: حجز طالب جديد ورسم الإيصال -->
+    <div id="modal-book-course" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative">
+            <button onclick="closeModal('modal-book-course')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600 text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center space-y-1">
+                <h3 class="text-xl font-bold text-slate-800">حجز مقعد ورفع إيصال السداد</h3>
+                <p id="book-modal-course-name" class="text-xs text-sky-600 font-semibold">كورس...</p>
+            </div>
+
+            <form onsubmit="handleStudentBookingSubmit(event)" class="space-y-4">
+                <input type="hidden" id="book-course-id">
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم الطالب الثلاثي</label>
+                    <input type="text" id="book-student-name" required placeholder="مثال: أحمد محمد علي" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الواتساب (لاستلام رابط المحاضرة)</label>
+                    <input type="tel" id="book-student-phone" required placeholder="0500000000" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none text-right" dir="ltr">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">صورة إيصال التحويل / السداد</label>
+                    <input type="file" id="book-receipt-file" accept="image/*" onchange="handleReceiptFileSelect(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+                    <p class="text-[10px] text-slate-400 mt-1">يمكن رفع صورة أو الاعتماد على صورة افتراضية تجريبية</p>
+                </div>
+
+                <!-- معاينة الإيصال -->
+                <div id="receipt-preview-box" class="hidden border border-slate-200 rounded-xl p-2 text-center bg-slate-50">
+                    <img id="receipt-preview-img" src="" class="max-h-32 mx-auto rounded-lg object-contain">
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition text-sm">
+                    تأكيد الحجز إرسال الإيصال <i class="fa-solid fa-paper-plane mr-1"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: استعلام الطالب عن الحجز ورابط المحاضرة -->
+    <div id="modal-check-status" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+            <button onclick="closeModal('modal-check-status')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center space-y-1">
+                <h3 class="text-xl font-bold text-slate-800">متابعة حالة الحجز ورابط المحاضرة</h3>
+                <p class="text-xs text-slate-500">أدخل رقم الهاتف أو كود الحجز المرجعي للاستعلام</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <input type="text" id="check-status-input" placeholder="رقم الهاتف أو كود الحجز (مثال: REG-2026-001)" class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none text-center">
+                </div>
+                <button onclick="searchStudentBookingStatus()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-sm transition">
+                    استعلام <i class="fa-solid fa-search mr-1"></i>
+                </button>
+            </div>
+
+            <!-- نتيجة الاستعلام -->
+            <div id="check-status-result" class="hidden space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                <!-- توضع النتائج عبر JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إضافة / تعديل كورس -->
+    <div id="modal-course-form" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-4 shadow-2xl relative">
+            <button onclick="closeModal('modal-course-form')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 id="course-form-title" class="text-xl font-bold text-slate-800">إضافة كورس تدريبي جديد</h3>
+
+            <form onsubmit="handleCourseFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="course-edit-id">
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">عنوان الكورس</label>
+                    <input type="text" id="form-course-title" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">المعلم المسؤول</label>
+                        <select id="form-course-teacher" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 bg-white">
+                            <!-- خيارات المعلمين -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">سعر الكورس (ر.س)</label>
+                        <input type="number" id="form-course-price" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">تاريخ المحاضرة</label>
+                        <input type="date" id="form-course-date" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">وقت المحاضرة</label>
+                        <input type="text" id="form-course-time" required placeholder="مثال: 08:00 مساءً" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رابط المحاضرة المباشر (Zoom / Google Meet)</label>
+                    <input type="url" id="form-course-link" required placeholder="https://zoom.us/j/..." class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500" dir="ltr">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">وصف قصير للكورس</label>
+                    <textarea id="form-course-desc" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-sky-500"></textarea>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-sm shadow">حفظ بيانات الكورس</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: معاينة إيصال السداد (Teacher View) -->
+    <div id="modal-view-receipt" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative text-center">
+            <button onclick="closeModal('modal-view-receipt')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800">معاينة إيصال سداد الطالب</h3>
+            <p id="receipt-modal-student-info" class="text-xs text-slate-500">طالب: ... | كود: ...</p>
+            
+            <div class="border border-slate-200 rounded-2xl p-2 bg-slate-50 max-h-80 overflow-y-auto flex items-center justify-center">
+                <img id="receipt-modal-img" src="" class="max-w-full h-auto rounded-lg">
+            </div>
+
+            <div id="receipt-modal-actions" class="flex gap-2 justify-center pt-2">
+                <!-- أزرار القبول والرفض تنشأ برمجيًا -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إرسال رابط المحاضرة للطلاب -->
+    <div id="modal-send-link" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <button onclick="closeModal('modal-send-link')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800">إرسال رابط المحاضرة للطالب</h3>
+            <div id="send-link-details" class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl space-y-1">
+                <!-- التفاصيل تتولد ديناميكياً -->
+            </div>
+
+            <div class="space-y-2">
+                <button id="btn-send-whatsapp" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 space-x-reverse shadow">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>إرسال عبر الواتساب المباشر</span>
+                </button>
+                <button id="btn-copy-msg" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center space-x-2 space-x-reverse border border-slate-300">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>نسخ نص الرسالة الترحيبية</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إدارة المعلمين (Super Admin View) -->
+    <div id="modal-manage-teachers" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative custom-scrollbar max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-manage-teachers')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-800">إدارة حسابات المعلمين النظاميين</h3>
+
+            <!-- نموذج إضافة معلم جديد -->
+            <form onsubmit="handleAddTeacherSubmit(event)" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <p class="font-bold text-xs text-slate-700">إضافة معلم جديد للنظام:</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input type="text" id="add-teacher-name" required placeholder="اسم المعلم" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none">
+                    <input type="email" id="add-teacher-email" required placeholder="البريد الإلكتروني" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none" dir="ltr">
+                    <input type="text" id="add-teacher-pass" required placeholder="كلمة المرور" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none" dir="ltr">
+                </div>
+                <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow">
+                    <i class="fa-solid fa-user-plus ml-1"></i> إضافة الحساب
+                </button>
+            </form>
+
+            <!-- جدول المعلمين -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                            <th class="p-2.5">المعلم</th>
+                            <th class="p-2.5">البريد الإلكتروني</th>
+                            <th class="p-2.5">كلمة السر</th>
+                            <th class="p-2.5 text-center">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teachers-table-body" class="divide-y divide-slate-100 text-slate-700">
+                        <!-- يتولد برمجيًا -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: إعدادات المزامنة السحابية عبر Google Sheets -->
+    <div id="modal-cloud-config" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative custom-scrollbar max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-cloud-config')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="text-center space-y-1">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">الربط بـ Google Sheets مجاناً</h3>
+                <p class="text-xs text-slate-500">حفظ وحفظ دائم وحي لبيانات الطلاب والدورات داخل جدول بيانات جوجل الخاص بك</p>
+            </div>
+
+            <form onsubmit="handleCloudConfigSubmit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رابط Google Apps Script Web App URL</label>
+                    <input type="url" id="cloud-script-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono" dir="ltr">
+                </div>
+
+                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2">
+                    <p class="font-bold text-slate-800"><i class="fa-solid fa-list-check text-emerald-600 ml-1"></i> خطوات إعداد Google Sheets في دقيقة واحدة:</p>
+                    <ol class="list-decimal list-inside text-slate-600 space-y-1 text-[11px] leading-relaxed">
+                        <li>أنشئ ملف <b>Google Sheets</b> جديد في حسابك.</li>
+                        <li>من القائمة اختر: <b>إضافات (Extensions) ⬅ Apps Script</b>.</li>
+                        <li>امسح الكود الموجود والصق كود السكريبت الموجود في الزر أدناه.</li>
+                        <li>اضغط <b>Deploy (نشر) ⬅ New deployment (نشر جديد)</b>.</li>
+                        <li>اختر نوع النشر: <b>Web app</b>، واجعل <i>Who has access</i> هو: <b>Anyone (أي شخص)</b>.</li>
+                        <li>انسخ رابط الـ Web App وضعه في الخانة أعلاه واضغط حفظ.</li>
+                    </ol>
+                    <button type="button" onclick="showAppsScriptCodeModal()" class="w-full py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl font-bold text-xs transition">
+                        <i class="fa-solid fa-code ml-1"></i> عرض كود Apps Script المباشر للنسخ
+                    </button>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow">حفظ واختبار الربط</button>
+                    <button type="button" onclick="fetchFromCloud()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">سحب من Google Sheets</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: عرض كود Apps Script للنسخ -->
+    <div id="modal-appsscript-code" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl relative">
+            <button onclick="closeModal('modal-appsscript-code')" class="absolute top-5 left-5 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <h3 class="text-lg font-bold text-slate-800">كود Google Apps Script</h3>
+            <p class="text-xs text-slate-500">انسخ هذا الكود بالكامل ووضعه داخل Apps Script في ملف Google Sheets الخاص بك:</p>
+
+            <textarea id="appsscript-code-box" readonly rows="10" class="w-full p-3 border border-slate-300 rounded-xl text-[11px] font-mono bg-slate-900 text-emerald-400 focus:outline-none" dir="ltr">
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("DB");
+  if (!sheet) {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("DB");
+    sheet.appendRow(["DATA"]);
+  }
+  var data = sheet.getRange(2, 1).getValue();
+  return ContentService.createTextOutput(data || "{}").setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("DB");
+  if (!sheet) {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("DB");
+    sheet.appendRow(["DATA"]);
+  }
+  var rawData = e.postData.contents;
+  sheet.getRange(2, 1).setValue(rawData);
+  return ContentService.createTextOutput(JSON.stringify({status: "success"})).setMimeType(ContentService.MimeType.JSON);
+}
+</textarea>
+
+            <button onclick="copyAppsScriptCode()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow">
+                <i class="fa-solid fa-copy ml-1"></i> نسخ كود Apps Script
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 6. فوتر المنصة (Footer) -->
+    <!-- ========================================== -->
+    <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 mt-12">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>© 2026 منصة الأكاديمية التعليمية - جميع الحقوق محفوظة</p>
+            <div class="flex space-x-4 space-x-reverse">
+                <span>نظام ربط المعلمين والطلاب متوافق مع Google Sites</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- 7. منطق المنصة البرمجي (JavaScript Engine) -->
+    <!-- ========================================== -->
+    <script>
+        // =========================================================================
+        // الثوابت ومفاتيح التخزين
+        // =========================================================================
+        const STORAGE_KEY_COURSES = 'edu_courses_db_v2';
+        const STORAGE_KEY_STUDENTS = 'edu_students_db_v2';
+        const STORAGE_KEY_TEACHERS = 'edu_teachers_db_v2';
+        const STORAGE_KEY_AUTH_USER = 'edu_auth_user_v2';
+        const STORAGE_KEY_GSHEET_URL = 'edu_gsheet_script_url_v3';
+
+        // رابط Google Apps Script المخصص والافتراضي للمستخدم
+        const DEFAULT_GSHEET_URL = 'https://script.google.com/macros/s/AKfycbzL1VEFODbWxHVmXpVP0948fYhpYeE1ZH9qlpdAYz2bDx_EC4ctZBspRz3D4SmL8Hw/exec';
+
+        // صورة افتراضية للإيصال عند التجربة
+        const DEFAULT_RECEIPT_IMG = 'https://placehold.co/600x800/0284c7/ffffff?text=Receipt+Sample+Paid';
+
+        let currentView = 'student';
+        let currentUser = null;
+
+        let coursesList = [];
+        let studentsList = [];
+        let teachersList = [];
+        let googleScriptUrl = '';
+
+        // =========================================================================
+        // التخزين السحابي المباشر عبر Google Sheets + Apps Script
+        // =========================================================================
+        function loadCloudConfig() {
+            googleScriptUrl = localStorage.getItem(STORAGE_KEY_GSHEET_URL) || DEFAULT_GSHEET_URL;
+            localStorage.setItem(STORAGE_KEY_GSHEET_URL, googleScriptUrl);
+            const urlInput = document.getElementById('cloud-script-url');
+            if (urlInput) urlInput.value = googleScriptUrl;
+            updateCloudStatusBadge();
+        }
+
+        function updateCloudStatusBadge() {
+            const badge = document.getElementById('cloud-status-badge');
+            const statusText = document.getElementById('cloud-status-text');
+            if (!badge || !statusText) return;
+
+            if (googleScriptUrl) {
+                badge.className = "flex items-center space-x-2 space-x-reverse px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer";
+                statusText.innerText = "سحابي مفعل (Google Sheets)";
+            } else {
+                badge.className = "flex items-center space-x-2 space-x-reverse px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition cursor-pointer";
+                statusText.innerText = "تخزين محلي (انقر للربط بـ Google Sheets)";
+            }
+        }
+
+        function openCloudConfigModal() {
+            loadCloudConfig();
+            openModal('modal-cloud-config');
+        }
+
+        function handleCloudConfigSubmit(e) {
+            e.preventDefault();
+            const url = document.getElementById('cloud-script-url').value.trim();
+            googleScriptUrl = url;
+            localStorage.setItem(STORAGE_KEY_GSHEET_URL, url);
+            updateCloudStatusBadge();
+            closeModal('modal-cloud-config');
+            if (googleScriptUrl) {
+                syncToCloud();
+            }
+        }
+
+        async function syncToCloud() {
+            if (!googleScriptUrl) return;
+            try {
+                const payload = {
+                    courses: coursesList,
+                    students: studentsList,
+                    teachers: teachersList
+                };
+                await fetch(googleScriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.error("Cloud Sync Error:", err);
+            }
+        }
+
+        async function fetchFromCloud() {
+            if (!googleScriptUrl) {
+                alert("يرجى إدخال رابط Google Apps Script أولاً.");
+                return;
+            }
+            try {
+                const res = await fetch(googleScriptUrl);
+                const data = await res.json();
+                if (data && (data.courses || data.students)) {
+                    coursesList = data.courses || coursesList;
+                    studentsList = data.students || studentsList;
+                    teachersList = data.teachers || teachersList;
+                    saveLocalState();
+                    renderAllViews();
+                    alert("تم سحب البيانات من Google Sheets بنجاح!");
+                    closeModal('modal-cloud-config');
+                }
+            } catch (err) {
+                console.error("Cloud Fetch Error:", err);
+                alert("تعذر سحب البيانات، تأكد من صحة الرابط ونشره كـ Web App يتاح لأي شخص (Anyone).");
+            }
+        }
+
+        // =========================================================================
+        // إعادة تحديث كافة الواجهات
+        // =========================================================================
+        function renderAllViews() {
+            renderStudentCourses();
+            renderDashboardTables();
+        }
+
+        function showAppsScriptCodeModal() {
+            openModal('modal-appsscript-code');
+        }
+
+        function copyAppsScriptCode() {
+            const codeText = document.getElementById('appsscript-code-box').value;
+            navigator.clipboard ? navigator.clipboard.writeText(codeText) : document.execCommand('copy');
+            alert("تم نسخ الكود بنجاح!");
+        }
+
+        // =========================================================================
+        // تهيئة النظام والتحميل الأولي
+        // =========================================================================
+        function initSystemData() {
+            const defaultTeachers = [
+                { id: 'T-101', name: 'أ. د / أحمد سامي', email: 'teacher@edu.com', password: '123456', title: 'خبير برمجة وتطوير ويب' },
+                { id: 'T-102', name: 'د / سارة محمود', email: 'sara@edu.com', password: '123456', title: 'معلمة الذكاء الاصطناعي' }
+            ];
+
+            const defaultCourses = [
+                { id: 'C-101', title: 'دورة تطوير تطبيقات الويب الشاملة', teacherId: 'T-101', teacherName: 'أ. د / أحمد سامي', price: 450, date: '2026-12-01', time: '07:00 مساءً', link: 'https://zoom.us/j/123456789', desc: 'تعلم بناء واجهات ويب متكاملة وتطبيقات تفاعلية من الصفر.' },
+                { id: 'C-102', title: 'أساسيات الذكاء الاصطناعي وتحليل البيانات', teacherId: 'T-102', teacherName: 'د / سارة محمود', price: 600, date: '2026-12-05', time: '08:30 مساءً', link: 'https://meet.google.com/abc-defg-hij', desc: 'مقدمة عمليّة في معالجة البيانات وبناء النماذج الذكية.' }
+            ];
+
+            const defaultStudents = [
+                { id: 'REG-2026-101', name: 'محمود عبد الله', phone: '0501112233', courseId: 'C-101', status: 'مؤكد السداد', linkSent: true, receiptImg: DEFAULT_RECEIPT_IMG, date: '2026-11-10' },
+                { id: 'REG-2026-102', name: 'عمر خالد', phone: '0554445566', courseId: 'C-102', status: 'قيد المراجعة', linkSent: false, receiptImg: DEFAULT_RECEIPT_IMG, date: '2026-11-11' }
+            ];
+
+            teachersList = JSON.parse(localStorage.getItem(STORAGE_KEY_TEACHERS)) || defaultTeachers;
+            coursesList = JSON.parse(localStorage.getItem(STORAGE_KEY_COURSES)) || defaultCourses;
+            studentsList = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS)) || defaultStudents;
+            currentUser = JSON.parse(localStorage.getItem(STORAGE_KEY_AUTH_USER)) || null;
+
+            saveLocalState();
+            loadCloudConfig();
+            if (googleScriptUrl) fetchFromCloud();
+        }
+
+        function saveLocalState() {
+            localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(teachersList));
+            localStorage.setItem(STORAGE_KEY_COURSES, JSON.stringify(coursesList));
+            localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(studentsList));
+            if (currentUser) {
+                localStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(currentUser));
+            } else {
+                localStorage.removeItem(STORAGE_KEY_AUTH_USER);
+            }
+            syncToCloud();
+        }
+
+        // =========================================================================
+        // التحكم بالواجهات والتنقل
+        // =========================================================================
+        function switchView(viewName) {
+            currentView = viewName;
+
+            document.getElementById('student-view-container').classList.add('hidden');
+            document.getElementById('login-view-container').classList.add('hidden');
+            document.getElementById('dashboard-view-container').classList.add('hidden');
+
+            const btnStudent = document.getElementById('btn-view-student');
+            const btnDash = document.getElementById('btn-view-dashboard');
+
+            btnStudent.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
+            btnDash.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
+
+            if (viewName === 'student') {
+                document.getElementById('student-view-container').classList.remove('hidden');
+                btnStudent.className = "px-3 py-1.5 rounded-lg transition bg-white text-sky-700 shadow-sm font-bold";
+                renderStudentCourses();
+            } else if (viewName === 'dashboard') {
+                btnDash.className = "px-3 py-1.5 rounded-lg transition bg-white text-sky-700 shadow-sm font-bold";
+                if (!currentUser) {
+                    document.getElementById('login-view-container').classList.remove('hidden');
+                } else {
+                    document.getElementById('dashboard-view-container').classList.remove('hidden');
+                    renderDashboardTables();
+                }
+            }
+            updateAuthBadge();
+        }
+
+        function updateAuthBadge() {
+            const badge = document.getElementById('user-auth-badge');
+            if (currentUser) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // =========================================================================
+        // تسجيل الدخول والخروج
+        // =========================================================================
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const userInput = document.getElementById('login-username').value.trim();
+            const passInput = document.getElementById('login-password').value.trim();
+            const errorMsg = document.getElementById('login-error-msg');
+
+            errorMsg.classList.add('hidden');
+
+            if ((userInput === 'admin' || userInput === 'admin@system.com') && passInput === 'admin123') {
+                currentUser = { id: 'ADMIN-0', name: 'مدير النظام', role: 'admin', email: userInput };
+            } else {
+                const foundTeacher = teachersList.find(t => (t.email === userInput || t.name === userInput) && t.password === passInput);
+                if (foundTeacher) {
+                    currentUser = { ...foundTeacher, role: 'teacher' };
+                }
+            }
+
+            if (currentUser) {
+                saveLocalState();
+                switchView('dashboard');
+            } else {
+                errorMsg.innerText = 'اسم المستخدم أو كلمة المرور غير صحيحة!';
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        function quickFillLogin(user, pass) {
+            document.getElementById('login-username').value = user;
+            document.getElementById('login-password').value = pass;
+        }
+
+        function logoutUser() {
+            currentUser = null;
+            saveLocalState();
+            switchView('student');
+        }
+
+        // =========================================================================
+        // عرض الكورسات لدى الطالب وحجز الدورة
+        // =========================================================================
+        function renderStudentCourses(filterQuery = '') {
+            const grid = document.getElementById('student-courses-grid');
+            if (!grid) return;
+
+            grid.innerHTML = '';
+            const filtered = coursesList.filter(c => 
+                c.title.includes(filterQuery) || c.teacherName.includes(filterQuery)
+            );
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400">لا توجد كورسات متاحة حالياً matching البحث</div>`;
+                return;
+            }
+
+            filtered.forEach(course => {
+                grid.innerHTML += `
+                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                        <div class="p-6 space-y-3">
+                            <div class="flex justify-between items-start">
+                                <span class="px-3 py-1 bg-sky-50 text-sky-700 text-xs font-bold rounded-full border border-sky-100">${course.teacherName}</span>
+                                <span class="text-lg font-extrabold text-slate-900">${course.price} <span class="text-xs font-normal text-slate-500">ج.م</span></span>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-800 leading-snug">${course.title}</h4>
+                            <p class="text-xs text-slate-500 line-clamp-2">${course.desc || 'لا يوجد وصف متاح.'}</p>
+                            
+                            <div class="pt-3 border-t border-slate-100 space-y-1 text-xs text-slate-600">
+                                <div><i class="fa-solid fa-calendar text-sky-600 ml-1.5"></i> التاريخ: ${course.date}</div>
+                                <div><i class="fa-solid fa-clock text-sky-600 ml-1.5"></i> التوقيت: ${course.time}</div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 border-t border-slate-100">
+                            <button onclick="openBookingModal('${course.id}')" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs shadow transition">
+                                <i class="fa-solid fa-ticket ml-1"></i> احجز مقعدك وارفع الإيصال
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterStudentCourses() {
+            const query = document.getElementById('student-search-input').value.trim();
+            renderStudentCourses(query);
+        }
+
+        let selectedReceiptBase64 = DEFAULT_RECEIPT_IMG;
+
+        function openBookingModal(courseId) {
+            const course = coursesList.find(c => c.id === courseId);
+            if (!course) return;
+            document.getElementById('book-course-id').value = course.id;
+            document.getElementById('book-modal-course-name').innerText = course.title + ' - (' + course.teacherName + ')';
+            selectedReceiptBase64 = DEFAULT_RECEIPT_IMG;
+            document.getElementById('book-receipt-file').value = '';
+            document.getElementById('receipt-preview-box').classList.add('hidden');
+            openModal('modal-book-course');
+        }
+
+        // معالجة وضغط صورة الإيصال فور اختيارها لضمان سهولة وسرعة الرفع
+        function handleReceiptFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // إنشاء Canvas لضغط وتقليل حجم الصورة حتى لا تثقل التخزين
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        const maxWidth = 800;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // تحويل الصورة المَضغوطة إلى صيغة JPEG بخفة وسرعة
+                        selectedReceiptBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        const previewImg = document.getElementById('receipt-preview-img');
+                        if (previewImg) {
+                            previewImg.src = selectedReceiptBase64;
+                            document.getElementById('receipt-preview-box').classList.remove('hidden');
+                        }
+                    };
+                    img.onerror = function() {
+                        alert('حدث خطأ أثناء قراءة صورة الإيصال، يرجى اختيار صورة صالحة.');
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleStudentBookingSubmit(e) {
+            e.preventDefault();
+            const courseId = document.getElementById('book-course-id').value;
+            const name = document.getElementById('book-student-name').value.trim();
+            const phone = document.getElementById('book-student-phone').value.trim();
+
+            const newRegId = 'REG-' + new Date().getFullYear() + '-' + Math.floor(100 + Math.random() * 900);
+
+            studentsList.push({
+                id: newRegId,
+                name: name,
+                phone: phone,
+                courseId: courseId,
+                status: 'قيد المراجعة',
+                linkSent: false,
+                receiptImg: selectedReceiptBase64,
+                date: new Date().toISOString().split('T')[0]
+            });
+
+            saveLocalState();
+            closeModal('modal-book-course');
+            alert(`تم إرسال الطلب وإيصال السداد بنجاح!\nكود المتابعة الخاص بك هو: ${newRegId}`);
+            document.getElementById('book-student-name').value = '';
+            document.getElementById('book-student-phone').value = '';
+        }
+
+        // =========================================================================
+        // استعلام الطالب عن حالة الحجز
+        // =========================================================================
+        function openCheckStatusModal() {
+            document.getElementById('check-status-result').classList.add('hidden');
+            openModal('modal-check-status');
+        }
+
+        function searchStudentBookingStatus() {
+            const query = document.getElementById('check-status-input').value.trim();
+            const resultBox = document.getElementById('check-status-result');
+            resultBox.innerHTML = '';
+
+            const matches = studentsList.filter(s => s.id === query || s.phone === query);
+
+            if (matches.length === 0) {
+                resultBox.innerHTML = `<div class="text-rose-600 font-bold text-center">لم يتم العثور على أي حجز برقم الهاتف أو الكود المرفق.</div>`;
+            } else {
+                matches.forEach(st => {
+                    const course = coursesList.find(c => c.id === st.courseId) || {};
+                    let badgeClass = st.status === 'مؤكد السداد' ? 'bg-emerald-100 text-emerald-800' : (st.status === 'مرفوض' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+                    
+                    let linkHtml = '';
+                    if (st.status === 'مؤكد السداد' && course.link) {
+                        linkHtml = `
+                            <div class="mt-2 pt-2 border-t border-slate-200">
+                                <a href="${course.link}" target="_blank" class="block w-full text-center py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition">
+                                    <i class="fa-solid fa-video ml-1"></i> دخول المحاضرة المباشرة
+                                </a>
+                            </div>
+                        `;
+                    }
+
+                    resultBox.innerHTML += `
+                        <div class="border-b border-slate-200 pb-3 last:border-0">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-slate-800">${course.title || 'كورس'}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${st.status}</span>
+                            </div>
+                            <div>كود الحجز: <b>${st.id}</b> | الطالب: ${st.name}</div>
+                            ${linkHtml}
+                        </div>
+                    `;
+                });
+            }
+            resultBox.classList.remove('hidden');
+        }
+
+        // =========================================================================
+        // لوحة تحكم المعلم والمدير
+        // =========================================================================
+        function renderDashboardTables() {
+            if (!currentUser) return;
+
+            const roleBadge = document.getElementById('dash-user-role-badge');
+            const welcomeTitle = document.getElementById('dash-welcome-title');
+            const btnManageTeachers = document.getElementById('btn-admin-manage-teachers');
+
+            if (currentUser.role === 'admin') {
+                roleBadge.innerText = 'مدير النظام العام';
+                roleBadge.className = 'px-2.5 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-lg';
+                welcomeTitle.innerText = `مرحباً بك، ${currentUser.name}`;
+                btnManageTeachers.classList.remove('hidden');
+            } else {
+                roleBadge.innerText = 'معلم دمج';
+                roleBadge.className = 'px-2.5 py-1 bg-sky-100 text-sky-800 text-xs font-bold rounded-lg';
+                welcomeTitle.innerText = `مرحباً بك، ${currentUser.name}`;
+                btnManageTeachers.classList.add('hidden');
+            }
+
+            // تصفية الكورسات حسب المستخدم
+            let visibleCourses = coursesList;
+            if (currentUser.role === 'teacher') {
+                visibleCourses = coursesList.filter(c => String(c.teacherId) === String(currentUser.id));
+            }
+
+            // الإحصائيات
+            const visibleCourseIds = visibleCourses.map(c => String(c.id));
+            const filteredStudents = studentsList.filter(s => visibleCourseIds.includes(String(s.courseId)));
+
+            document.getElementById('stat-total-students').innerText = filteredStudents.length;
+            document.getElementById('stat-pending-payments').innerText = filteredStudents.filter(s => s.status === 'قيد المراجعة').length;
+            document.getElementById('stat-approved-payments').innerText = filteredStudents.filter(s => s.status === 'مؤكد السداد').length;
+            document.getElementById('stat-sent-links').innerText = filteredStudents.filter(s => s.linkSent).length;
+
+            // جدول الكورسات
+            const courseTbody = document.getElementById('dash-courses-table-body');
+            courseTbody.innerHTML = '';
+            
+            if (visibleCourses.length === 0) {
+                courseTbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">لا توجد دورات تدريبية مضافة حتى الآن.</td></tr>`;
+            } else {
+                visibleCourses.forEach(c => {
+                    courseTbody.innerHTML += `
+                        <tr data-course-id="${c.id}">
+                            <td class="p-3 font-bold text-slate-800">${c.title}</td>
+                            <td class="p-3 text-xs text-slate-600">${c.teacherName}</td>
+                            <td class="p-3 text-xs">${c.date} | ${c.time}</td>
+                            <td class="p-3 font-bold">${c.price} ج.م</td>
+                            <td class="p-3 text-xs"><a href="${c.link}" target="_blank" class="text-sky-600 underline font-mono">رابط البث</a></td>
+                            <td class="p-3 text-center space-x-1 space-x-reverse">
+                                <button onclick="window.openEditCourseModal('${c.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"><i class="fa-solid fa-pen ml-1"></i>تعديل</button>
+                                <button onclick="window.deleteCourse('${c.id}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold"><i class="fa-solid fa-trash ml-1"></i>حذف</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // تحديث خيارات الفلترة
+            const filterCourseSelect = document.getElementById('dash-filter-course');
+            filterCourseSelect.innerHTML = `<option value="ALL">جميع الدورات المتاحة</option>`;
+            visibleCourses.forEach(c => {
+                filterCourseSelect.innerHTML += `<option value="${c.id}">${c.title}</option>`;
+            });
+
+            // جدول الطلاب
+            renderStudentsTable(filteredStudents);
+        }
+
+        function renderStudentsTable(studentsData) {
+            const selectedCourseId = document.getElementById('dash-filter-course').value;
+            const selectedStatus = document.getElementById('dash-filter-status').value;
+
+            let filtered = studentsData;
+            if (selectedCourseId !== 'ALL') {
+                filtered = filtered.filter(s => s.courseId === selectedCourseId);
+            }
+            if (selectedStatus !== 'ALL') {
+                filtered = filtered.filter(s => s.status === selectedStatus);
+            }
+
+            const tbody = document.getElementById('dash-students-table-body');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">لا توجد بيانات طلاب مطابقة.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(st => {
+                const course = coursesList.find(c => c.id === st.courseId) || {};
+                let statusBadge = st.status === 'مؤكد السداد' ? 'bg-emerald-100 text-emerald-800' : (st.status === 'مرفوض' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3">
+                            <div class="font-bold text-slate-800">${st.name}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">${st.id}</div>
+                        </td>
+                        <td class="p-3 font-mono text-xs" dir="ltr">${st.phone}</td>
+                        <td class="p-3 text-xs font-semibold">${course.title || 'كورس'}</td>
+                        <td class="p-3 text-xs">
+                            <button onclick="openReceiptModal('${st.id}')" class="px-2.5 py-1 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-lg font-bold">
+                                <i class="fa-solid fa-image ml-1"></i>معاينة الإيصال
+                            </button>
+                        </td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${statusBadge}">${st.status}</span></td>
+                        <td class="p-3 text-center space-x-1 space-x-reverse">
+                            <button onclick="openSendLinkModal('${st.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow">
+                                <i class="fa-solid fa-paper-plane ml-1"></i>إرسال الرابط
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // =========================================================================
+        // إضافة وتعديل الكورسات
+        // =========================================================================
+        function openAddCourseModal() {
+            document.getElementById('course-form-title').innerText = 'إضافة كورس تدريبي جديد';
+            document.getElementById('course-edit-id').value = '';
+            document.getElementById('form-course-title').value = '';
+            document.getElementById('form-course-price').value = '';
+            document.getElementById('form-course-date').value = '';
+            document.getElementById('form-course-time').value = '';
+            document.getElementById('form-course-link').value = '';
+            document.getElementById('form-course-desc').value = '';
+
+            // تخصيص قائمة خيارات المعلم بناءً على صلاحية المستخدم
+            populateTeacherSelectOptions();
+            openModal('modal-course-form');
+        }
+
+        function openEditCourseModal(courseId) {
+            const course = coursesList.find(c => String(c.id) === String(courseId));
+            if (!course) return;
+
+            document.getElementById('course-form-title').innerText = 'تعديل بيانات الدورة التدريبية';
+            document.getElementById('course-edit-id').value = course.id;
+            document.getElementById('form-course-title').value = course.title;
+            document.getElementById('form-course-price').value = course.price;
+            document.getElementById('form-course-date').value = course.date;
+            document.getElementById('form-course-time').value = course.time;
+            document.getElementById('form-course-link').value = course.link;
+            document.getElementById('form-course-desc').value = course.desc || '';
+
+            populateTeacherSelectOptions(course.teacherId);
+            openModal('modal-course-form');
+        }
+
+        function populateTeacherSelectOptions(selectedId = '') {
+            const select = document.getElementById('form-course-teacher');
+            select.innerHTML = '';
+
+            // إذا كان المستخدم معلم، يقتصر الاختيار على حسابه فقط ويتم قفل القائمة
+            if (currentUser && currentUser.role === 'teacher') {
+                select.innerHTML = `<option value="${currentUser.id}" selected>${currentUser.name} (حسابك الحالي)</option>`;
+                select.disabled = true;
+            } else {
+                // إذا كان المدير (Admin)، تتاح له صلاحية اختيار أي معلم
+                select.disabled = false;
+                teachersList.forEach(t => {
+                    const isSelected = String(t.id) === String(selectedId) ? 'selected' : '';
+                    select.innerHTML += `<option value="${t.id}" ${isSelected}>${t.name}</option>`;
+                });
+            }
+        }
+
+        function handleCourseFormSubmit(e) {
+            e.preventDefault();
+            const editId = document.getElementById('course-edit-id').value;
+            const title = document.getElementById('form-course-title').value.trim();
+            
+            // تحديد المعلم المسؤول بناءً على دور المستخدم الحالي
+            let teacherId = document.getElementById('form-course-teacher').value;
+            if (currentUser && currentUser.role === 'teacher') {
+                teacherId = currentUser.id;
+            }
+
+            const teacherObj = teachersList.find(t => String(t.id) === String(teacherId)) || currentUser;
+            const price = document.getElementById('form-course-price').value;
+            const date = document.getElementById('form-course-date').value;
+            const time = document.getElementById('form-course-time').value;
+            const link = document.getElementById('form-course-link').value;
+            const desc = document.getElementById('form-course-desc').value;
+
+            if (editId) {
+                const idx = coursesList.findIndex(c => String(c.id) === String(editId));
+                if (idx !== -1) {
+                    coursesList[idx] = { ...coursesList[idx], title, teacherId, teacherName: teacherObj ? teacherObj.name : 'معلم', price, date, time, link, desc };
+                }
+            } else {
+                coursesList.push({
+                    id: 'C-' + Math.floor(100 + Math.random() * 900),
+                    title, teacherId, teacherName: teacherObj ? teacherObj.name : 'معلم', price, date, time, link, desc
+                });
+            }
+
+            saveLocalState();
+            closeModal('modal-course-form');
+            renderAllViews();
+        }
+
+        function deleteCourse(courseId) {
+            if (!courseId) return;
+            const targetId = String(courseId);
+            const course = coursesList.find(c => String(c.id) === targetId);
+            
+            if (!course) {
+                console.warn("Course not found for deletion:", courseId);
+                return;
+            }
+
+            if (confirm(`هل أنت تأكد من حذف كورس "${course.title}" بالكامل؟`)) {
+                // 1. حذف الدورة من القائمة الرئيسية
+                coursesList = coursesList.filter(c => String(c.id) !== targetId);
+                
+                // 2. حذف الحجوزات المرتبطة بهذه الدورة
+                studentsList = studentsList.filter(s => String(s.courseId) !== targetId);
+                
+                // 3. حفظ وحفظ الحالة في السحاب وتحديث كل الشاشات
+                saveLocalState();
+                renderAllViews();
+            }
+        }
+
+        // =========================================================================
+        // إدارة المعلمين (Super Admin View)
+        // =========================================================================
+        function openTeachersManagementModal() {
+            renderTeachersListTable();
+            openModal('modal-manage-teachers');
+        }
+
+        function renderTeachersListTable() {
+            const tbody = document.getElementById('teachers-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (teachersList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">لا يوجد معلمون مسجلون حالياً</td></tr>`;
+                return;
+            }
+
+            teachersList.forEach(t => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2.5 font-bold">${t.name}</td>
+                        <td class="p-2.5 font-mono" dir="ltr">${t.email}</td>
+                        <td class="p-2.5 font-mono" dir="ltr">${t.password}</td>
+                        <td class="p-2.5 text-center">
+                            <button onclick="window.deleteTeacher('${t.id}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded text-xs font-bold border border-rose-200">
+                                <i class="fa-solid fa-trash ml-1"></i>حذف
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function handleAddTeacherSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('add-teacher-name').value.trim();
+            const email = document.getElementById('add-teacher-email').value.trim();
+            const pass = document.getElementById('add-teacher-pass').value.trim();
+
+            teachersList.push({
+                id: 'T-' + Math.floor(100 + Math.random() * 900),
+                name: name,
+                email: email,
+                password: pass,
+                title: 'معلم مضاف'
+            });
+
+            saveLocalState();
+            renderTeachersListTable();
+            renderAllViews();
+
+            document.getElementById('add-teacher-name').value = '';
+            document.getElementById('add-teacher-email').value = '';
+            document.getElementById('add-teacher-pass').value = '';
+            alert('تمت إضافة المعلم بنجاح!');
+        }
+
+        function deleteTeacher(teacherId) {
+            const teacher = teachersList.find(t => String(t.id) === String(teacherId));
+            if (!teacher) return;
+
+            if (confirm(`هل أنت تأكد من حذف حساب المعلم "${teacher.name}"؟\nتنبيه: سيؤدي ذلك أيضاً إلى حذف جميع الكورسات والحجوزات المرتبطة بهذا المعلم تلقائياً.`)) {
+                // 1. تحديد كافة الكورسات التابعة للمعلم المراد حذفه
+                const teacherCourseIds = coursesList
+                    .filter(c => String(c.teacherId) === String(teacherId))
+                    .map(c => String(c.id));
+
+                // 2. حذف الحجوزات والطلاب المرتبطين بهذه الكورسات
+                studentsList = studentsList.filter(s => !teacherCourseIds.includes(String(s.courseId)));
+
+                // 3. حذف الكورسات التابعة للمعلم
+                coursesList = coursesList.filter(c => String(c.teacherId) !== String(teacherId));
+
+                // 4. حذف المعلم من قائمة المعلمين
+                teachersList = teachersList.filter(t => String(t.id) !== String(teacherId));
+
+                // 5. حفظ التغييرات وتحديث المزامنة ومختلف الواجهات
+                saveLocalState();
+                renderTeachersListTable();
+                renderAllViews();
+
+                alert(`تم حذف المعلم "${teacher.name}" مع كافة الكورسات والحجوزات المرتبطة به بنجاح.`);
+            }
+        }
+
+        // =========================================================================
+        // معاينة واعتماد / رفض إيصالات السداد
+        // =========================================================================
+        let currentViewingStudentId = null;
+
+        function openReceiptModal(studentId) {
+            const student = studentsList.find(s => String(s.id) === String(studentId));
+            if (!student) return;
+
+            currentViewingStudentId = student.id;
+            document.getElementById('receipt-modal-student-info').innerText = `طالب: ${student.name} | كود: ${student.id}`;
+            document.getElementById('receipt-modal-img').src = student.receiptImg || DEFAULT_RECEIPT_IMG;
+
+            const actionsBox = document.getElementById('receipt-modal-actions');
+            actionsBox.innerHTML = `
+                <button onclick="window.approvePayment('${student.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow">
+                    <i class="fa-solid fa-check ml-1"></i>تأكيد واعتماد السداد
+                </button>
+                <button onclick="window.rejectPayment('${student.id}')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow">
+                    <i class="fa-solid fa-xmark ml-1"></i>رفض الإيصال
+                </button>
+            `;
+
+            openModal('modal-view-receipt');
+        }
+
+        function approvePayment(studentId) {
+            const idx = studentsList.findIndex(s => String(s.id) === String(studentId));
+            if (idx !== -1) {
+                studentsList[idx].status = 'مؤكد السداد';
+                saveLocalState();
+                renderAllViews();
+                closeModal('modal-view-receipt');
+                alert('تم اعتماد السداد بنجاح! يمكنك الآن إرسال رابط المحاضرة للطالب.');
+            }
+        }
+
+        function rejectPayment(studentId) {
+            const idx = studentsList.findIndex(s => String(s.id) === String(studentId));
+            if (idx !== -1) {
+                studentsList[idx].status = 'مرفوض';
+                saveLocalState();
+                renderAllViews();
+                closeModal('modal-view-receipt');
+                alert('تم تحديد حالة الإيصال كـ مرفوض.');
+            }
+        }
+
+        // =========================================================================
+        // إرسال رابط المحاضرة للطلاب عبر الواتساب أو نسخ النص
+        // =========================================================================
+        function openSendLinkModal(studentId) {
+            const student = studentsList.find(s => String(s.id) === String(studentId));
+            if (!student) return;
+
+            const course = coursesList.find(c => String(c.id) === String(student.courseId)) || {};
+            const detailsBox = document.getElementById('send-link-details');
+
+            detailsBox.innerHTML = `
+                <p><b>اسم الطالب:</b> ${student.name}</p>
+                <p><b>الكورس:</b> ${course.title || 'دورة تدريبية'}</p>
+                <p><b>الموعد:</b> ${course.date} - ${course.time}</p>
+                <p><b>رابط المحاضرة:</b> <span class="font-mono text-sky-700">${course.link || 'غير محدد'}</span></p>
+            `;
+
+            const messageText = `أهلاً بك يا ${student.name} 👋\nتم تأكيد حجزك في "${course.title}".\n\n📅 موعد المحاضرة: ${course.date} الساعة ${course.time}\n🔗 رابط المحاضرة المباشر:\n${course.link}\n\nنتمنى لك التوفيق!`;
+
+            const formattedPhone = student.phone.replace(/[^0-9]/g, '');
+            document.getElementById('btn-send-whatsapp').onclick = function() {
+                const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`;
+                window.open(waUrl, '_blank');
+                markLinkAsSent(student.id);
+            };
+
+            document.getElementById('btn-copy-msg').onclick = function() {
+                navigator.clipboard ? navigator.clipboard.writeText(messageText) : document.execCommand('copy');
+                alert('تم نسخ نص الرسالة بنجاح!');
+                markLinkAsSent(student.id);
+            };
+
+            openModal('modal-send-link');
+        }
+
+        function markLinkAsSent(studentId) {
+            const idx = studentsList.findIndex(s => String(s.id) === String(studentId));
+            if (idx !== -1) {
+                studentsList[idx].linkSent = true;
+                saveLocalState();
+                renderAllViews();
+            }
+        }
+
+        // =========================================================================
+        // أداة فتح وإغلاق النوافذ المنبثقة (Modal Utilities)
+        // =========================================================================
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function openEmbedModal() {
+            alert('يمكنك تضمين هذا التطبيق في Google Sites عبر نسخ رابط أو كود iFrame للصفحة.');
+        }
+
+        function scrollToSection(sectionId) {
+            const sec = document.getElementById(sectionId);
+            if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // =========================================================================
+        // إتاحة كافة الدوال مباشرة على window لضمان التنفيذ الصريح من HTML
+        // =========================================================================
+        window.deleteCourse = deleteCourse;
+        window.openEditCourseModal = openEditCourseModal;
+        window.openAddCourseModal = openAddCourseModal;
+        window.openTeachersManagementModal = openTeachersManagementModal;
+        window.handleAddTeacherSubmit = handleAddTeacherSubmit;
+        window.deleteTeacher = deleteTeacher;
+        window.openReceiptModal = openReceiptModal;
+        window.approvePayment = approvePayment;
+        window.rejectPayment = rejectPayment;
+        window.openSendLinkModal = openSendLinkModal;
+        window.renderAllViews = renderAllViews;
+        window.switchView = switchView;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+
+        // =========================================================================
+        // التشغيل التلقائي عند بداية التحميل
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            initSystemData();
+            switchView('student');
+        });
+    </script>
+</body>
+</html>
